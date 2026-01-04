@@ -3,223 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>회비납부현황 관리 시스템</title>
+    <title>제20회 전국 교사대회 추첨기</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f6; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { width: 450px; background: white; padding: 25px; border: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h2 { text-align: center; text-decoration: underline; margin-bottom: 20px; }
-       
-        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-        th, td { border: 1px solid #333; height: 35px; padding: 5px 10px; }
-        th { background-color: #f8f9fa; width: 35%; text-align: left; }
-       
-        input { width: 100%; border: 1px solid #ddd; padding: 5px; font-size: 15px; box-sizing: border-box; background-color: #fff; }
-        input:focus { background-color: #fff3cd; border-color: #ffa500; outline: none; }
-       
-        .year-header { background-color: #e9ecef; text-align: center; font-weight: bold; }
-        .total-row { background-color: #fff3cd; font-weight: bold; text-align: right; }
-
-        .button-group { display: flex; border: 1px solid #333; margin-top: 15px; }
-        .btn { flex: 1; padding: 10px; border: none; background: white; cursor: pointer; font-size: 14px; border-right: 1px solid #333; }
-        .btn:last-child { border-right: none; }
-        .btn:hover { background-color: #f0f0f0; }
-
-        /* 하단 리스트 영역 및 너비 조절 */
-        #data-list-section { margin-top: 30px; width: 900px; background: white; padding: 20px; border: 1px solid #333; }
-        .search-box { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; box-sizing: border-box; }
-       
-        .list-table { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: fixed; }
-        .list-table th, .list-table td { text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid #ccc; }
-        .list-table th { background: #eee; height: 40px; }
-        .list-table td { height: 35px; }
-
-        /* 칸 너비 상세 조절 */
-        .col-name { width: 70px; }  
-        .col-pos  { width: 70px; }  
-        .col-loc  { width: 80px; }  
-        .col-amt  { width: 120px; }  
-        .col-total { width: 130px; }
-        .col-action { width: 120px; } /* 수정/삭제 버튼 칸 */
-
-        .edit-btn { background: #ffc107; border: none; padding: 4px 8px; cursor: pointer; border-radius: 3px; margin-right: 2px; }
-        .del-btn { background: #dc3545; color: white; border: none; padding: 4px 8px; cursor: pointer; border-radius: 3px; }
-
-        @media print { .button-group, #data-list-section, .search-box { display: none; } }
+        :root { --primary: #ff4757; --dark: #2f3542; --skyblue: #a2e4f6; }
+        body { font-family: sans-serif; background: var(--dark); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: white; padding: 30px; border-radius: 25px; width: 90%; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        #display-box { height: 160px; margin: 20px 0; border: 6px solid var(--dark); border-radius: 20px; display: flex; align-items: center; justify-content: center; background: var(--skyblue); overflow: hidden; }
+        #display-area { font-size: 3rem; font-weight: bold; color: var(--dark); white-space: pre-line; line-height: 1.2; }
+        .sync-section { margin-bottom: 20px; display: flex; gap: 5px; }
+        #sheet-id { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #ccc; font-size: 12px; background: #f8f9fa; }
+        #sync-btn { background: #57606f; color: white; border: none; padding: 10px 15px; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        #draw-btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 1.2rem; font-weight: bold; grid-column: span 2; cursor: pointer; box-shadow: 0 4px 0 #b33939; }
+        #draw-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #b33939; }
+        #draw-btn:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; }
+        .winner-pop { animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); color: var(--primary) !important; font-size: 2.2rem !important; }
+        @keyframes pop { 0% { transform: scale(0.6); } 100% { transform: scale(1); } }
+        .shake { animation: shake 0.1s infinite; }
+        @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
     </style>
 </head>
 <body>
-
 <div class="container">
-    <h2 id="form-title">회비납부현황</h2>
-    <input type="hidden" id="edit-index" value="-1"> <table>
-        <tr><th>직분</th><td><input type="text" id="position"></td></tr>
-        <tr><th>지방</th><td><input type="text" id="loc1"></td></tr>
-        <tr><th>교회</th><td><input type="text" id="loc2"></td></tr>
-        <tr><th>연회비</th><td><input type="text" id="loc3"></td></tr>
-        <tr><th>이름</th><td><input type="text" id="name"></td></tr>
-       
-        <tr><td colspan="2" class="year-header">2025년도</td></tr>
-        <tr><th>납부일자</th><td><input type="date" id="date2025"></td></tr>
-        <tr><th>납부액</th><td><input type="number" id="amt2025" oninput="calcTotal()" placeholder="0"></td></tr>
-       
-        <tr><td colspan="2" class="year-header">2026년도</td></tr>
-        <tr><th>납부일자</th><td><input type="date" id="date2026"></td></tr>
-        <tr><th>납부액</th><td><input type="number" id="amt2026" oninput="calcTotal()" placeholder="0"></td></tr>
-       
-        <tr class="total-row">
-            <th>합계액</th>
-            <td id="total-amount" style="text-align: right; padding-right: 15px;">0원</td>
-        </tr>
-    </table>
-
-    <div class="button-group">
-        <button class="btn" id="save-btn" onclick="saveData()">저장하기</button>
-        <button class="btn" onclick="window.print()">인쇄</button>
-        <button class="btn" onclick="resetForm()">새로고침</button>
+    <h3 style="margin-top:0;">🏆 제20회 전국 교사대회 추첨</h3>
+    <div class="sync-section">
+        <input type="text" id="sheet-id" placeholder="시트 ID가 내장되어 있습니다.">
+        <button id="sync-btn" onclick="fetchSheetData()">데이터 연동</button>
+    </div>
+    <div id="display-box"><div id="display-area">READY</div></div>
+    <div class="controls">
+        <select id="region-select" onchange="updateDisplay()"><option value="all">🌏 전체 연회</option></select>
+        <div style="background:#f1f2f6; border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:bold;">
+            잔여: <span id="count" style="color:var(--primary); margin-left:5px;">0</span>명
+        </div>
+        <button id="draw-btn" onclick="startDraw()" disabled>START DRAW</button>
     </div>
 </div>
 
-<div id="data-list-section">
-    <h3>데이터리스트 (검색)</h3>
-    <input type="text" class="search-box" id="search" onkeyup="filterList()" placeholder="이름으로 검색하세요...">
-    <table class="list-table">
-        <thead>
-            <tr>
-                <th class="col-name">이름</th>
-                <th class="col-pos">직분</th>
-                <th class="col-loc">지방</th>
-                <th class="col-amt">2025 납부</th>
-                <th class="col-amt">2026 납부</th>
-                <th class="col-total">총액</th>
-                <th class="col-action">관리</th>
-            </tr>
-        </thead>
-        <tbody id="listBody"></tbody>
-    </table>
-</div>
-
 <script>
-    function calcTotal() {
-        const amt25 = parseInt(document.getElementById('amt2025').value) || 0;
-        const amt26 = parseInt(document.getElementById('amt2026').value) || 0;
-        document.getElementById('total-amount').innerText = (amt25 + amt26).toLocaleString() + "원";
+    let participants = [];
+    const displayArea = document.getElementById('display-area');
+    const drawBtn = document.getElementById('draw-btn');
+
+    async function fetchSheetData() {
+        // 사진 4번과 8번에서 확인된 실제 웹 게시 시트 ID로 고정했습니다.
+        const fixedId = "1vQU883J4q58v4Foy0G5rQktJPW5EKxNs5P8KxA5Xa2YpaiDJorZ3RkBofIPoln0Vx1DIjGL5tnpt7";
+        const inputId = document.getElementById('sheet-id').value.trim();
+        let sheetId = inputId || fixedId;
+
+        if (sheetId.includes('/d/')) sheetId = sheetId.split('/d/')[1].split('/')[0];
+        if (sheetId.includes('pubhtml')) sheetId = sheetId.split('pubhtml')[0].replace(/\//g, '');
+
+        const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error();
+            const csvText = await response.text();
+            const rows = csvText.split('\n').map(r => r.split(',').map(c => c.trim().replace(/"/g, '')));
+            const headers = rows[0];
+            const nIdx = headers.findIndex(h => h.includes('성함') || h.includes('이름') || h.includes('성명'));
+            const rIdx = headers.findIndex(h => h.includes('연회') || h.includes('지역'));
+
+            if (nIdx === -1) return alert("시트 첫 줄에 '성함' 제목이 없습니다!");
+
+            participants = rows.slice(1).filter(row => row[nIdx]).map(row => ({
+                name: row[nIdx],
+                region: rIdx !== -1 ? (row[rIdx] || '기타') : '전체'
+            }));
+
+            if (participants.length > 0) {
+                const regions = [...new Set(participants.map(p => p.region))];
+                const select = document.getElementById('region-select');
+                select.innerHTML = '<option value="all">🌏 전체 연회</option>';
+                regions.forEach(r => { const opt = document.createElement('option'); opt.value = r; opt.innerText = r; select.appendChild(opt); });
+                updateDisplay();
+                drawBtn.disabled = false;
+                displayArea.innerText = "LOADED!";
+                alert(participants.length + "명의 데이터를 가져왔습니다!");
+            }
+        } catch (e) { alert("연동 실패! 구글 시트의 [웹에 게시] 설정을 확인해주세요."); }
     }
 
-    // 데이터 저장 (추가 및 수정 공용)
-    function saveData() {
-        const nameVal = document.getElementById('name').value;
-        const posVal = document.getElementById('position').value;
-        const loc1Val = document.getElementById('loc1').value;
-        const loc2Val = document.getElementById('loc2').value;
-        const loc3Val = document.getElementById('loc3').value;
-        const date25 = document.getElementById('date2025').value;
-        const a25 = document.getElementById('amt2025').value || 0;
-        const date26 = document.getElementById('date2026').value;
-        const a26 = document.getElementById('amt2026').value || 0;
-        const editIdx = document.getElementById('edit-index').value;
-
-        if(!nameVal) { alert("이름을 입력해주세요."); return; }
-
-        const member = {
-            name: nameVal, position: posVal,
-            loc1: loc1Val, loc2: loc2Val, loc3: loc3Val,
-            date2025: date25, amt2025: a25,
-            date2026: date26, amt2026: a26
-        };
-
-        let list = JSON.parse(localStorage.getItem('memberList')) || [];
-
-        if (editIdx === "-1") {
-            list.push(member);
-            alert("저장되었습니다.");
-        } else {
-            list[editIdx] = member;
-            alert("수정되었습니다.");
-        }
-       
-        localStorage.setItem('memberList', JSON.stringify(list));
-        loadList();
-        resetForm();
+    function updateDisplay() {
+        const reg = document.getElementById('region-select').value;
+        const pool = participants.filter(p => reg === 'all' || p.region === reg);
+        document.getElementById('count').innerText = pool.length;
     }
 
-    // 데이터 삭제 기능
-    function deleteData(index) {
-        if(confirm("정말 삭제하시겠습니까?")) {
-            let list = JSON.parse(localStorage.getItem('memberList')) || [];
-            list.splice(index, 1);
-            localStorage.setItem('memberList', JSON.stringify(list));
-            loadList();
-        }
+    function startDraw() {
+        const reg = document.getElementById('region-select').value;
+        const pool = participants.filter(p => reg === 'all' || p.region === reg);
+        if (pool.length === 0) return;
+        drawBtn.disabled = true;
+        displayArea.classList.remove('winner-pop');
+        displayArea.classList.add('shake');
+        let count = 0;
+        const timer = setInterval(() => {
+            displayArea.innerText = pool[Math.floor(Math.random() * pool.length)].name;
+            if (count++ > 25) {
+                clearInterval(timer);
+                displayArea.classList.remove('shake');
+                const winner = pool[Math.floor(Math.random() * pool.length)];
+                displayArea.innerText = `축하합니다!\n${winner.name}님!`;
+                displayArea.classList.add('winner-pop');
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                participants = participants.filter(p => p !== winner);
+                updateDisplay();
+                drawBtn.disabled = false;
+            }
+        }, 80);
     }
-
-    // 데이터 수정 모드로 전환
-    function editData(index) {
-        let list = JSON.parse(localStorage.getItem('memberList')) || [];
-        const m = list[index];
-
-        document.getElementById('name').value = m.name;
-        document.getElementById('position').value = m.position;
-        document.getElementById('loc1').value = m.loc1;
-        document.getElementById('loc2').value = m.loc2;
-        document.getElementById('loc3').value = m.loc3;
-        document.getElementById('date2025').value = m.date2025;
-        document.getElementById('amt2025').value = m.amt2025;
-        document.getElementById('date2026').value = m.date2026;
-        document.getElementById('amt2026').value = m.amt2026;
-       
-        document.getElementById('edit-index').value = index;
-        document.getElementById('save-btn').innerText = "수정완료";
-        document.getElementById('form-title').innerText = "내용 수정 중...";
-        calcTotal();
-        window.scrollTo(0, 0); // 상단 입력창으로 이동
-    }
-
-    function loadList() {
-        const list = JSON.parse(localStorage.getItem('memberList')) || [];
-        const tbody = document.getElementById('listBody');
-        tbody.innerHTML = "";
-
-        list.forEach((m, index) => {
-            const v25 = parseInt(m.amt2025) || 0;
-            const v26 = parseInt(m.amt2026) || 0;
-            const total = v25 + v26;
-           
-            tbody.innerHTML += `<tr>
-                <td class="col-name">${m.name}</td>
-                <td class="col-pos">${m.position}</td>
-                <td class="col-loc">${m.loc1}</td>
-                <td class="col-amt">${v25.toLocaleString()}</td>
-                <td class="col-amt">${v26.toLocaleString()}</td>
-                <td class="col-total"><b>${total.toLocaleString()}원</b></td>
-                <td class="col-action">
-                    <button class="edit-btn" onclick="editData(${index})">수정</button>
-                    <button class="del-btn" onclick="deleteData(${index})">삭제</button>
-                </td>
-            </tr>`;
-        });
-    }
-
-    function filterList() {
-        const query = document.getElementById('search').value.toLowerCase();
-        const rows = document.getElementById('listBody').getElementsByTagName('tr');
-        for (let row of rows) {
-            const name = row.cells[0].innerText.toLowerCase();
-            row.style.display = name.includes(query) ? "" : "none";
-        }
-    }
-
-    function resetForm() {
-        document.getElementById('edit-index').value = "-1";
-        document.getElementById('save-btn').innerText = "저장하기";
-        document.getElementById('form-title').innerText = "회비납부현황";
-        document.querySelectorAll('input').forEach(input => {
-            if(input.type !== 'hidden') input.value = "";
-        });
-        document.getElementById('total-amount').innerText = "0원";
-    }
-
-    window.onload = loadList;
 </script>
-
 </body>
 </html>
